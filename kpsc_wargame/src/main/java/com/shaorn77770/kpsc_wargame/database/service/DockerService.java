@@ -38,7 +38,7 @@ public class DockerService {
                     }
 
                     // 로그 가져오기
-                    String logs = getContainerLogs(id);
+                    String logs = getContainerInfo(id);
 
                     list.add(new ContainerData(id, name, isRunning, logs));
                 }
@@ -67,89 +67,122 @@ public class DockerService {
         }
     }
 
-    private String getContainerLogs(String containerId) {
-        StringBuilder logs = new StringBuilder();
+    private String getContainerInfo(String containerId) {
+        StringBuilder info = new StringBuilder();
+
         try {
-            Process process = new ProcessBuilder("docker", "logs", "--tail", "30", containerId).start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logs.append(line).append("\n");
-            }
-        } catch (Exception e) {
-            logs.append("로그를 불러오지 못했습니다.");
-        }
-        return logs.toString();
-    }
+            Process statsProcess = new ProcessBuilder("docker", "stats", "--no-stream", "--format",
+                    "\"{{.CPUPerc}}|{{.MemUsage}}\"", containerId).start();
 
-public String makeContianer(UserData user, String domain, int mem) {
-    try {
-        String containerName = "jupyter_" + user.getStudentNumber();
-
-        String osName = System.getProperty("os.name").toLowerCase();
-        boolean isLinux = osName.contains("linux");
-
-        List<String> command = new ArrayList<>(Arrays.asList(
-            "docker", "run", "-d",
-            "--name", containerName
-        ));
-
-        // 리눅스에서만 storage-opt 옵션 적용
-        if (isLinux) {
-            command.addAll(Arrays.asList("--storage-opt", "size=" + mem + "g"));
-        }
-
-        if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
-            command.addAll(Arrays.asList("-p", "0:8888")); // 무작위 포트
-        } else {
-            command.addAll(Arrays.asList("-p", user.getPort())); 
-        }
-
-        // 환경 변수 및 Jupyter 설정
-        command.addAll(Arrays.asList(
-            "-e", "JUPYTER_TOKEN=" + user.getApiKey(),
-            "jupyter/base-notebook",
-            "start-notebook.sh",
-            "--NotebookApp.token=" + user.getApiKey(),
-            "--NotebookApp.default_url=/lab",
-            "--NotebookApp.ip=0.0.0.0",
-            "--NotebookApp.allow_remote_access=True"
-        ));
-
-        // 컨테이너 실행
-        Process process = new ProcessBuilder(command).start();
-        process.waitFor();
-
-        // 무작위 포트인 경우에만 실제 포트 확인
-        String hostPort;
-        if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
-            Process portProcess = new ProcessBuilder(
-                "docker", "port", containerName, "8888"
-            ).start();
-
-            try (Scanner scanner = new Scanner(portProcess.getInputStream())) {
-                String portLine = scanner.hasNextLine() ? scanner.nextLine() : null;
-                if (portLine != null && portLine.contains(":")) {
-                    hostPort = portLine.split(":")[1].trim();
-                } else {
-                    return null;
+            BufferedReader statsReader = new BufferedReader(new InputStreamReader(statsProcess.getInputStream()));
+            String statsLine = statsReader.readLine();
+            if (statsLine != null) {
+                statsLine = statsLine.replace("\"", "");
+                String[] parts = statsLine.split("\\|");
+                if (parts.length == 2) {
+                    info.append("🧠 메모리 사용량: ").append(parts[1]).append("\n");
+                    info.append("⚙️ CPU 사용량: ").append(parts[0]).append("\n");
                 }
+            } else {
+                info.append("리소스 정보 없음 (docker stats 실패)\n");
             }
-        } else {
-            // 이미 등록된 포트 사용
-            hostPort = user.getPort().split(":")[0].trim();
+
+            Process inspectProcess = new ProcessBuilder("docker", "inspect", "-f",
+                    "{{ range .Mounts }}{{ .Source }}{{ end }}", containerId).start();
+
+            BufferedReader inspectReader = new BufferedReader(new InputStreamReader(inspectProcess.getInputStream()));
+            String volumePath = inspectReader.readLine();
+
+            if (volumePath != null && !volumePath.isEmpty()) {
+                // du -sh 로 실제 사용량 확인
+                Process duProcess = new ProcessBuilder("du", "-sh", volumePath).start();
+                BufferedReader duReader = new BufferedReader(new InputStreamReader(duProcess.getInputStream()));
+                String duLine = duReader.readLine();
+                if (duLine != null && duLine.contains("\t")) {
+                    String[] duParts = duLine.split("\t");
+                    info.append("💾 디스크 사용량: ").append(duParts[0]).append(" (경로: ").append(volumePath).append(")").append("\n");
+                }
+            } else {
+                info.append("스토리지 정보 없음 (볼륨 마운트 없음)\n");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            info.append("⚠️ 리소스 정보를 불러오지 못했습니다.\n");
         }
 
-        // 최종 접속 URL 생성
-        String jupyterUrl = "http://" + domain + ":" + hostPort + "/?token=" + user.getApiKey();
-        return jupyterUrl;
-
-    } catch (Exception e) {
-        e.printStackTrace();
+        return info.toString();
     }
 
-    return null;
-}
+
+    public String makeContianer(UserData user, String domain, int mem) {
+        try {
+            String containerName = "jupyter_" + user.getStudentNumber();
+
+            String osName = System.getProperty("os.name").toLowerCase();
+            boolean isLinux = osName.contains("linux");
+
+            List<String> command = new ArrayList<>(Arrays.asList(
+                "docker", "run", "-d",
+                "--name", containerName
+            ));
+
+            // 리눅스에서만 storage-opt 옵션 적용
+            if (isLinux) {
+                command.addAll(Arrays.asList("--storage-opt", "size=" + mem + "g"));
+            }
+
+            if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
+                command.addAll(Arrays.asList("-p", "0:8888")); // 무작위 포트
+            } else {
+                command.addAll(Arrays.asList("-p", user.getPort())); 
+            }
+
+            // 환경 변수 및 Jupyter 설정
+            command.addAll(Arrays.asList(
+                "-e", "JUPYTER_TOKEN=" + user.getApiKey(),
+                "jupyter/base-notebook",
+                "start-notebook.sh",
+                "--NotebookApp.token=" + user.getApiKey(),
+                "--NotebookApp.default_url=/lab",
+                "--NotebookApp.ip=0.0.0.0",
+                "--NotebookApp.allow_remote_access=True"
+            ));
+
+            // 컨테이너 실행
+            Process process = new ProcessBuilder(command).start();
+            process.waitFor();
+
+            // 무작위 포트인 경우에만 실제 포트 확인
+            String hostPort;
+            if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
+                Process portProcess = new ProcessBuilder(
+                    "docker", "port", containerName, "8888"
+                ).start();
+
+                try (Scanner scanner = new Scanner(portProcess.getInputStream())) {
+                    String portLine = scanner.hasNextLine() ? scanner.nextLine() : null;
+                    if (portLine != null && portLine.contains(":")) {
+                        hostPort = portLine.split(":")[1].trim();
+                    } else {
+                        return null;
+                    }
+                }
+            } else {
+                // 이미 등록된 포트 사용
+                hostPort = user.getPort().split(":")[0].trim();
+            }
+
+            // 최종 접속 URL 생성
+            String jupyterUrl = "http://" + domain + ":" + hostPort + "/?token=" + user.getApiKey();
+            return jupyterUrl;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 
 
     public boolean removeContainer(UserData user) {

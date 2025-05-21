@@ -1,12 +1,7 @@
 package com.shaorn77770.kpsc_wargame.controller;
 
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.List;
-import java.util.Scanner;
-import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
