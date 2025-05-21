@@ -90,7 +90,7 @@ public class AdminController {
     }
     
     @PostMapping("/requests/approve")
-    public String approveAccount(@RequestParam(name = "key") String apiKey, @RequestParam(name = "mem") int mem, HttpServletRequest request, Model model, RedirectAttributes redirectAttributes) {
+    public String approveAccount(@RequestParam(name = "key") String apiKey, HttpServletRequest request, Model model, RedirectAttributes redirectAttributes) {
         if(!isLogin(request.getCookies())) {
             return "redirect:/admin/login";
         }
