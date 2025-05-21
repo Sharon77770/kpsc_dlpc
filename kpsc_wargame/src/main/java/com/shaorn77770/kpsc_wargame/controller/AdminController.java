@@ -101,7 +101,7 @@ public class AdminController {
         }
         
         UserData user = userService.findByKey(apiKey);
-        String dockerUrl = dockerService.makeContianer(user, domain.getDomain(), mem);
+        String dockerUrl = dockerService.makeContianer(user, domain.getDomain());
         
         if(dockerUrl == null) {
             model.addAttribute("errorMessage", "컨테이너 생성 실패.");
@@ -110,7 +110,6 @@ public class AdminController {
 
         user.setAllow(true);
         user.setJupyterUrl(dockerUrl);
-        user.setStorageSize(mem);
         userService.save(user);
         redirectAttributes.addFlashAttribute("successMessage", "승인 완료");
 

@@ -23,7 +23,7 @@ public class ResetApplication {
         var userList = userService.getAllowedUsers();
 
         for (UserData userData : userList) {
-            String dockerUrl = dockerService.makeContianer(userData, domain.getDomain(), userData.getStorageSize());
+            String dockerUrl = dockerService.makeContianer(userData, domain.getDomain());
             
             if(dockerUrl == null) {
                 continue;

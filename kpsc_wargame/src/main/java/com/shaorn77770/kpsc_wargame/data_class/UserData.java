@@ -16,7 +16,6 @@ public class UserData {
     private int studentNumber;
     private boolean allow;
     private String jupyterUrl;
-    private int storageSize;
     
     public String getPort() {
         if(jupyterUrl == null || jupyterUrl.isEmpty())

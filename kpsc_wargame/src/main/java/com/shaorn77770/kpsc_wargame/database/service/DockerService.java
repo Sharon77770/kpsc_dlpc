@@ -115,7 +115,7 @@ public class DockerService {
     }
 
 
-    public String makeContianer(UserData user, String domain, int mem) {
+    public String makeContianer(UserData user, String domain) {
         try {
             String containerName = "jupyter_" + user.getStudentNumber();
 
@@ -126,11 +126,6 @@ public class DockerService {
                 "docker", "run", "-d",
                 "--name", containerName
             ));
-
-            // 리눅스에서만 storage-opt 옵션 적용
-            if (isLinux) {
-                command.addAll(Arrays.asList("--storage-opt", "size=" + mem + "g"));
-            }
 
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
                 command.addAll(Arrays.asList("-p", "0:8888")); // 무작위 포트

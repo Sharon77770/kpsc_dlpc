@@ -51,7 +51,6 @@
             <th>학번</th>
             <th>학과</th>
             <th>전화번호</th>
-            <th>용량(GB)</th>
             <th>승인</th>
             <th>거절</th>
           </tr>
@@ -63,7 +62,6 @@
             <td th:text="${user.major}">학과</td>
             <td th:text="${user.phone}">전화번호</td>
             <form th:action="@{'/admin/requests/approve?key=' + ${user.apiKey}}" method="post">
-              <td><input name="mem" type="number" class="form-control" value="50"></td>
               <td><button type="submit" class="btn btn-success btn-sm">승인</button>
             </form>
             </td>
