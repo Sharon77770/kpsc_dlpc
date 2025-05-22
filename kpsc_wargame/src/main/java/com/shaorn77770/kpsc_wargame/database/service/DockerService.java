@@ -57,8 +57,8 @@ public class DockerService {
         try {
             Process process = new ProcessBuilder("docker", "ps",
                 "-a",
-                "--filter", "\"name="+ name + "\"",                    
-                "--format", "\"{{.ID}} {{.Names}} {{.Status}}\""
+                "--filter", "name="+ name,                    
+                "--format", "{{.ID}} {{.Names}} {{.Status}}"
             ).start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
