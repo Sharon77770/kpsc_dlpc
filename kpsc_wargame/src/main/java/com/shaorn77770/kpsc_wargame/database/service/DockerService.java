@@ -221,7 +221,7 @@ public class DockerService {
             ));
 
             command.addAll(Arrays.asList(
-                "nvidia/cuda:12.9.0-cudnn-devel-ubuntu24.04",
+                "nvidia/cuda:12.2.0-base-ubuntu20.04",
                 "bash", "-c", setupScript
             ));
 
