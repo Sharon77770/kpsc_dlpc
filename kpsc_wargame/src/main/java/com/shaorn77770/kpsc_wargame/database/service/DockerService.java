@@ -154,15 +154,14 @@ public class DockerService {
                             gpuIndex++, gpuParts[0], gpuParts[1], gpuParts[3], gpuParts[2]));
                 }
             }
-
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             e.printStackTrace();
             info.append("⚠️ 리소스 정보를 불러오지 못했습니다.\n");
         }
 
         return info.toString();
     }
-
 
     public String makeContianer(UserData user, String domain) {
         try {
@@ -176,19 +175,29 @@ public class DockerService {
 
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
                 command.addAll(Arrays.asList("-p", "0:8888")); // 무작위 포트
-            } else {
-                command.addAll(Arrays.asList("-p", user.getPort())); 
+            } 
+            else {
+                command.addAll(Arrays.asList("-p", user.getPort()));
             }
 
-            // 환경 변수 및 Jupyter 설정
+            // sudo 설치 및 무비밀번호 설정 포함한 entrypoint를 bash -c 로 처리
+            String apiKey = user.getApiKey();
+            String setupScript = String.join(" && ", Arrays.asList(
+                "apt update",
+                "apt install -y sudo",
+                "echo 'jovyan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+                "start-notebook.sh " +
+                "--NotebookApp.token=" + apiKey +
+                " --NotebookApp.default_url=/lab" +
+                " --NotebookApp.ip=0.0.0.0" +
+                " --NotebookApp.allow_remote_access=True"
+            ));
+
+            // 환경 변수와 커맨드 추가
             command.addAll(Arrays.asList(
-                "-e", "JUPYTER_TOKEN=" + user.getApiKey(),
+                "-e", "JUPYTER_TOKEN=" + apiKey,
                 "jupyter/base-notebook",
-                "start-notebook.sh",
-                "--NotebookApp.token=" + user.getApiKey(),
-                "--NotebookApp.default_url=/lab",
-                "--NotebookApp.ip=0.0.0.0",
-                "--NotebookApp.allow_remote_access=True"
+                "bash", "-c", setupScript
             ));
 
             // 컨테이너 실행
@@ -211,13 +220,10 @@ public class DockerService {
                     }
                 }
             } else {
-                // 이미 등록된 포트 사용
                 hostPort = user.getPort().split(":")[0].trim();
             }
 
-            // 최종 접속 URL 생성
-            String jupyterUrl = "http://" + domain + ":" + hostPort + "/?token=" + user.getApiKey();
-            return jupyterUrl;
+            return "http://" + domain + ":" + hostPort + "/?token=" + apiKey;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -225,7 +231,6 @@ public class DockerService {
 
         return null;
     }
-
 
     public boolean removeContainer(UserData user) {
         String containerName = "jupyter_" + user.getStudentNumber();
