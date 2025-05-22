@@ -201,19 +201,22 @@ public class DockerService {
 
             // Jupyter 이미지 및 setup 스크립트
             String setupScript = String.join(" && ", Arrays.asList(
-                "ln -s /usr/bin/python3 /usr/bin/python",
                 "apt update",
-                "apt install -y sudo",
+                "apt install -y sudo python3 python3-pip",
+                "ln -s /usr/bin/python3 /usr/bin/python",
+                "pip3 install notebook",
+                "useradd -m jovyan",
                 "echo 'jovyan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
-                "start-notebook.sh " +
-                "--NotebookApp.token=" + apiKey +
-                " --NotebookApp.default_url=/lab" +
-                " --NotebookApp.ip=0.0.0.0" +
-                " --NotebookApp.allow_remote_access=True"
+                "su jovyan -c \"jupyter notebook " +
+                    "--NotebookApp.token=" + apiKey +
+                    " --NotebookApp.default_url=/lab" +
+                    " --NotebookApp.ip=0.0.0.0" +
+                    " --NotebookApp.allow_remote_access=True " +
+                    "--no-browser --port=8888\""
             ));
 
             command.addAll(Arrays.asList(
-                "jupyter/base-notebook",
+                "nvidia/cuda:12.2.0-base-ubuntu20.04",
                 "bash", "-c", setupScript
             ));
 
