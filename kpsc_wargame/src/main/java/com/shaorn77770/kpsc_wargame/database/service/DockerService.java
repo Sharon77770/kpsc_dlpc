@@ -203,6 +203,7 @@ public class DockerService {
             String setupScript = String.join(" && ", Arrays.asList(
                 "apt update",
                 "apt install -y sudo python3 python3-pip",
+                "if [ -L /usr/bin/python ] || [ -f /usr/bin/python ]; then rm /usr/bin/python; fi",
                 "ln -s /usr/bin/python3 /usr/bin/python",
                 "pip3 install notebook",
                 "useradd -m jovyan",
