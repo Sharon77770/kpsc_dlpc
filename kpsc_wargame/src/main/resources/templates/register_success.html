@@ -58,44 +58,12 @@
   <script>
     function copyApiKey() {
       const apiKey = document.getElementById("apiKey").innerText;
-
-      // 최신 브라우저 (HTTPS에서만 안정적으로 작동)
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(apiKey).then(() => {
-          showCopyAlert();
-        }).catch(err => {
-          fallbackCopyText(apiKey); // fallback
-        });
-      } else {
-        fallbackCopyText(apiKey); // fallback
-      }
-    }
-
-    function fallbackCopyText(text) {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";  // 화면에 안 보이게
-      textarea.style.top = "-1000px";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-
-      try {
-        const successful = document.execCommand("copy");
-        if (successful) showCopyAlert();
-      } catch (err) {
-        alert("복사 실패: " + err);
-      }
-
-      document.body.removeChild(textarea);
-    }
-
-    function showCopyAlert() {
-      const alertBox = document.getElementById("copyAlert");
-      alertBox.style.display = "block";
-      setTimeout(() => {
-        alertBox.style.display = "none";
-      }, 2000);
+      navigator.clipboard.writeText(apiKey).then(() => {
+        document.getElementById("copyAlert").style.display = "block";
+        setTimeout(() => {
+          document.getElementById("copyAlert").style.display = "none";
+        }, 2000);
+      });
     }
   </script>
 </body>
