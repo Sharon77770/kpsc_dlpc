@@ -1,6 +1,9 @@
 package com.shaorn77770.kpsc_wargame.data_class;
 
 import lombok.Data;
+
+import java.net.URL;
+
 import jakarta.persistence.*;
 
 @Data
@@ -20,7 +23,13 @@ public class UserData {
     public String getPort() {
         if(jupyterUrl == null || jupyterUrl.isEmpty())
             return null;
-
-        return jupyterUrl.split(":")[2].split("/")[0]; 
+        try {
+            URL url = new URL(jupyterUrl);
+            return "" + url.getPort();
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
