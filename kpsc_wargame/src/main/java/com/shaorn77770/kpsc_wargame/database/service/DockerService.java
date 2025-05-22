@@ -202,12 +202,15 @@ public class DockerService {
             // Jupyter 이미지 및 setup 스크립트
             String setupScript = String.join(" && ", Arrays.asList(
                 "apt update",
-                "apt install -y sudo python3 python3-pip",
+                "apt install -y sudo python3 python3-pip bash util-linux",
                 "if [ -L /usr/bin/python ] || [ -f /usr/bin/python ]; then rm /usr/bin/python; fi",
                 "ln -s /usr/bin/python3 /usr/bin/python",
                 "pip3 install --upgrade pip",
                 "pip3 install --upgrade jupyterlab",
-                "useradd -m jovyan",
+                "useradd -m -s /bin/bash jovyan",
+                "cp /etc/skel/.bashrc /home/jovyan/",
+                "cp /etc/skel/.profile /home/jovyan/",
+                "chown jovyan:jovyan /home/jovyan/.bashrc /home/jovyan/.profile",
                 "echo 'jovyan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
                 "su jovyan -c \"jupyter lab " +
                     "--NotebookApp.token=" + apiKey +
@@ -217,9 +220,8 @@ public class DockerService {
                     "--no-browser --port=8888\""
             ));
 
-
             command.addAll(Arrays.asList(
-                "nvidia/cuda:12.2.0-base-ubuntu20.04",
+                "nvidia/cuda:12.9.0-cudnn-devel-ubuntu24.04",
                 "bash", "-c", setupScript
             ));
 
