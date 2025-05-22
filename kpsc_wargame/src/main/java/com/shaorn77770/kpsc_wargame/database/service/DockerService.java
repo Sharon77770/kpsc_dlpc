@@ -212,7 +212,7 @@ public class DockerService {
             ));
 
             command.addAll(Arrays.asList(
-                "nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04",
+                "nvcr.io/nvidia/pytorch:24.03-py3",
                 "bash", "-c", setupScript
             ));
 
