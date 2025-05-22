@@ -201,9 +201,9 @@ public class DockerService {
 
             // Jupyter 이미지 및 setup 스크립트
             String setupScript = String.join(" && ", Arrays.asList(
-                "useradd -m kpsc1",
-                "echo 'kpsc1 ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
-                "su kpsc1 -c \"jupyter notebook " +
+                "id -u kpsc || useradd -m kpsc",  // ✅ 존재하지 않을 때만 생성
+                "echo 'kpsc ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+                "su kpsc -c \"jupyter notebook " +
                     "--NotebookApp.token=" + apiKey +
                     " --NotebookApp.default_url=/lab" +
                     " --NotebookApp.ip=0.0.0.0" +
