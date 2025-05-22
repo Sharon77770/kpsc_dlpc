@@ -205,16 +205,18 @@ public class DockerService {
                 "apt install -y sudo python3 python3-pip",
                 "if [ -L /usr/bin/python ] || [ -f /usr/bin/python ]; then rm /usr/bin/python; fi",
                 "ln -s /usr/bin/python3 /usr/bin/python",
-                "pip3 install notebook",
+                "pip3 install --upgrade pip",
+                "pip3 install --upgrade jupyterlab",
                 "useradd -m jovyan",
                 "echo 'jovyan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
-                "su jovyan -c \"jupyter notebook " +
+                "su jovyan -c \"jupyter lab " +
                     "--NotebookApp.token=" + apiKey +
                     " --NotebookApp.default_url=/lab" +
                     " --NotebookApp.ip=0.0.0.0" +
                     " --NotebookApp.allow_remote_access=True " +
                     "--no-browser --port=8888\""
             ));
+
 
             command.addAll(Arrays.asList(
                 "nvidia/cuda:12.2.0-base-ubuntu20.04",
