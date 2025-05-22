@@ -2,11 +2,15 @@ package com.shaorn77770.kpsc_wargame;
 
 import java.net.Socket;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class KpscWargameApplication {
+
+	private static final Logger logger = LogManager.getLogger(KpscWargameApplication.class);
 
 	public static void main(String[] args) {
 		try {
@@ -15,13 +19,13 @@ public class KpscWargameApplication {
 
             int exitCode = process.waitFor();
             if (exitCode == 0) {
-                System.out.println("Docker is running.");
+                logger.info("Docker is running.");
             } else {
-                System.out.println("Docker is not running.");
+                logger.error("Docker is not running.");
 				return;
             }
         } catch (Exception e) {
-            System.out.println("Docker is not installed or not running.");
+            logger.error("Docker is not installed or not running.", e);
 			return;
         }
 
@@ -29,9 +33,9 @@ public class KpscWargameApplication {
         int port = 3306;
 
         try (Socket socket = new Socket(host, port)) {
-            System.out.println("MySQL is running on " + host + ":" + port);
+            logger.info("MySQL is running on {}:{}", host, port);
         } catch (Exception e) {
-            System.out.println("MySQL is not running or not reachable.");
+            logger.error("MySQL is not running or not reachable.", e);
 			return;
         }
 

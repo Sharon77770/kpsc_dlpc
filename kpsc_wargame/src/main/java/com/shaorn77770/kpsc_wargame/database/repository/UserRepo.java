@@ -8,26 +8,52 @@ import com.shaorn77770.kpsc_wargame.data_class.UserData;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Repository
 @RequiredArgsConstructor
 public class UserRepo {
     private final EntityManager em;
+    private static final Logger logger = LogManager.getLogger(UserRepo.class);
 
     public void insert(UserData user) {
-        em.persist(user);
+        try {
+            em.persist(user);
+            logger.info("유저 insert: {}", user.getApiKey());
+        } catch (Exception e) {
+            logger.error("유저 insert 예외 발생: {}", user.getApiKey(), e);
+            throw e;
+        }
     }
 
     public void update(UserData user) {
-        em.merge(user);
+        try {
+            em.merge(user);
+            logger.info("유저 update: {}", user.getApiKey());
+        } catch (Exception e) {
+            logger.error("유저 update 예외 발생: {}", user.getApiKey(), e);
+            throw e;
+        }
     }
     
     public void remove(String userId) {
-        em.remove(findById(userId));
+        try {
+            em.remove(findById(userId));
+            logger.info("유저 remove: {}", userId);
+        } catch (Exception e) {
+            logger.error("유저 remove 예외 발생: {}", userId, e);
+            throw e;
+        }
     }
     
     public UserData findById(String userId) {
-        return em.find(UserData.class, userId);
+        try {
+            return em.find(UserData.class, userId);
+        } catch (Exception e) {
+            logger.error("findById 예외 발생: {}", userId, e);
+            throw e;
+        }
     }
     
     public Boolean contains(String userId) {

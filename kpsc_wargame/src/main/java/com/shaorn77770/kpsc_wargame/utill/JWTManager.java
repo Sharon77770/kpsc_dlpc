@@ -10,29 +10,37 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Component
 @RequiredArgsConstructor
 @ConfigurationProperties(prefix = "jwt")
 public class JWTManager {
+    private static final Logger logger = LogManager.getLogger(JWTManager.class);
     private String jwtkey;
 
     private long tokenValidTime = 1000L * 60 * 60 * 24; //60분
 	
 	public String createToken(String userId, String pw) {
-		Claims claims = Jwts.claims().setId(userId);
-		Date now = new Date();
-		return Jwts.builder().setClaims(claims).setIssuedAt(now)
-				.setExpiration(new Date(now.getTime() + tokenValidTime))
-				.setIssuer("kpsc.dlpc")
-				.signWith(SignatureAlgorithm.HS256, jwtkey).compact();
+		try {
+			Claims claims = Jwts.claims().setId(userId);
+			Date now = new Date();
+			return Jwts.builder().setClaims(claims).setIssuedAt(now)
+					.setExpiration(new Date(now.getTime() + tokenValidTime))
+					.setIssuer("kpsc.dlpc")
+					.signWith(SignatureAlgorithm.HS256, jwtkey).compact();
+		} catch (Exception e) {
+			logger.error("JWT 토큰 생성 실패: {}", userId, e);
+			throw e;
+		}
 	}
 	
 	public Jws<Claims> getClaims(String jwt) {
 		try {
 			return Jwts.parser().setSigningKey(jwtkey).parseClaimsJws(jwt);
 		} catch (Exception e) {
+			logger.warn("JWT 파싱 실패: {}", jwt, e);
 			return null;
 		}
 	}

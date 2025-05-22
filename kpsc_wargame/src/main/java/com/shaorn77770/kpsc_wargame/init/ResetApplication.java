@@ -1,6 +1,8 @@
 package com.shaorn77770.kpsc_wargame.init;
 
 import org.springframework.stereotype.Component;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.shaorn77770.kpsc_wargame.data_class.Domain;
 import com.shaorn77770.kpsc_wargame.data_class.UserData;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class ResetApplication {
+    private static final Logger logger = LogManager.getLogger(ResetApplication.class);
     
     private final UserService userService;
     private final DockerService dockerService;
@@ -20,17 +23,23 @@ public class ResetApplication {
 
     @PostConstruct
     public void init() {
-        var userList = userService.getAllowedUsers();
+        try {
+            var userList = userService.getAllowedUsers();
 
-        for (UserData userData : userList) {
-            String dockerUrl = dockerService.makeContianer(userData, domain.getDomain());
-            
-            if(dockerUrl == null) {
-                continue;
+            for (UserData userData : userList) {
+                String dockerUrl = dockerService.makeContainer(userData, domain.getDomain());
+                
+                if(dockerUrl == null) {
+                    logger.warn("컨테이너 재생성 실패: {}", userData.getApiKey());
+                    continue;
+                }
+
+                userData.setJupyterUrl(dockerUrl);
+                userService.save(userData);
+                logger.info("컨테이너 재생성 및 유저 업데이트: {}", userData.getApiKey());
             }
-
-            userData.setJupyterUrl(dockerUrl);
-            userService.save(userData);
+        } catch (Exception e) {
+            logger.error("ResetApplication 초기화 중 예외 발생", e);
         }
     }
 }

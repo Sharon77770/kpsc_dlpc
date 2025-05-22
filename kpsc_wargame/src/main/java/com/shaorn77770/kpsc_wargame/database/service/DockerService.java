@@ -10,6 +10,8 @@ import java.util.Scanner;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.shaorn77770.kpsc_wargame.data_class.ContainerData;
 import com.shaorn77770.kpsc_wargame.data_class.UserData;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Service
 public class DockerService {
+    private static final Logger logger = LogManager.getLogger(DockerService.class);
+
     public List<ContainerData> getAllContainers() {
         List<ContainerData> list = new ArrayList<>();
         try {
@@ -44,7 +48,7 @@ public class DockerService {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("getAllContainers 예외 발생", e);
         }
         return list;
     }
@@ -76,17 +80,21 @@ public class DockerService {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("getContainer 예외 발생: {}", name, e);
         }
         return null;
     }
 
     public boolean stopContainer(String containerId) {
-        return runCommand("docker", "stop", containerId);
+        boolean result = runCommand("docker", "stop", containerId);
+        if (!result) logger.error("컨테이너 중지 실패: {}", containerId);
+        return result;
     }
 
     public boolean startContainer(String containerId) {
-        return runCommand("docker", "start", containerId);
+        boolean result = runCommand("docker", "start", containerId);
+        if (!result) logger.error("컨테이너 실행 실패: {}", containerId);
+        return result;
     }
 
     private boolean runCommand(String... command) {
@@ -94,7 +102,7 @@ public class DockerService {
             Process process = new ProcessBuilder(command).start();
             return process.waitFor() == 0;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("runCommand 예외 발생: {}", String.join(" ", command), e);
             return false;
         }
     }
@@ -156,33 +164,44 @@ public class DockerService {
             }
         } 
         catch (Exception e) {
-            e.printStackTrace();
+            logger.error("getContainerInfo 예외 발생: {}", containerId, e);
             info.append("⚠️ 리소스 정보를 불러오지 못했습니다.\n");
         }
 
         return info.toString();
     }
 
-    public String makeContianer(UserData user, String domain) {
+    public String makeContainer(UserData user, String domain) {
         try {
             String containerName = "jupyter_" + user.getStudentNumber();
+            String apiKey = user.getApiKey();
 
             List<String> command = new ArrayList<>(Arrays.asList(
                 "docker", "run", "-d",
-                "--name", containerName,
-                "--gpus", "all"
+                "--name", containerName
             ));
 
+            // GPU 사용 가능 여부 확인
+            if (isNvidiaSmiAvailable()) {
+                command.addAll(Arrays.asList("--gpus", "all"));
+            }
+
+            // 포트 설정
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
-                command.addAll(Arrays.asList("-p", "0:8888")); // 무작위 포트
-            } 
-            else {
+                command.addAll(Arrays.asList("-p", "0:8888"));
+            } else {
                 command.addAll(Arrays.asList("-p", user.getPort()));
             }
 
-            // sudo 설치 및 무비밀번호 설정 포함한 entrypoint를 bash -c 로 처리
-            String apiKey = user.getApiKey();
+            // 루트 권한으로 실행
+            command.addAll(Arrays.asList("--user", "root"));
+
+            // 환경 변수 설정
+            command.addAll(Arrays.asList("-e", "JUPYTER_TOKEN=" + apiKey));
+
+            // Jupyter 이미지 및 setup 스크립트
             String setupScript = String.join(" && ", Arrays.asList(
+                "ln -s /usr/bin/python3 /usr/bin/python",
                 "apt update",
                 "apt install -y sudo",
                 "echo 'jovyan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
@@ -193,29 +212,28 @@ public class DockerService {
                 " --NotebookApp.allow_remote_access=True"
             ));
 
-            // 환경 변수와 커맨드 추가
             command.addAll(Arrays.asList(
-                "-e", "JUPYTER_TOKEN=" + apiKey,
                 "jupyter/base-notebook",
                 "bash", "-c", setupScript
             ));
 
-            // 컨테이너 실행
             Process process = new ProcessBuilder(command).start();
             process.waitFor();
 
-            // 무작위 포트인 경우에만 실제 포트 확인
             String hostPort;
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
                 Process portProcess = new ProcessBuilder(
                     "docker", "port", containerName, "8888"
                 ).start();
+                portProcess.waitFor();
 
                 try (Scanner scanner = new Scanner(portProcess.getInputStream())) {
                     String portLine = scanner.hasNextLine() ? scanner.nextLine() : null;
+
                     if (portLine != null && portLine.contains(":")) {
                         hostPort = portLine.split(":")[1].trim();
                     } else {
+                        logger.error("makeContainer 에러 발생: host port: {}", portLine);
                         return null;
                     }
                 }
@@ -226,10 +244,23 @@ public class DockerService {
             return "http://" + domain + ":" + hostPort + "/?token=" + apiKey;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("makeContainer 예외 발생: user={}, domain={}", user.getStudentNumber(), domain, e);
         }
 
         return null;
+    }
+
+
+    // nvidia-smi 명령어가 존재하는지 확인하는 메서드 추가
+    private boolean isNvidiaSmiAvailable() {
+        try {
+            Process process = new ProcessBuilder("which", "nvidia-smi").start();
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (IOException | InterruptedException e) {
+            logger.warn("nvidia-smi 존재 확인 중 예외 발생", e);
+            return false;
+        }
     }
 
     public boolean removeContainer(UserData user) {
@@ -241,12 +272,12 @@ public class DockerService {
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
-                System.err.println("도커 컨테이너 삭제 실패: " + containerName);
+                logger.error("도커 컨테이너 삭제 실패: {} (exitCode={})", containerName, exitCode);
                 return false;
             }
         } 
         catch (Exception e) {
-            System.err.println("도커 컨테이너 삭제 실패: " + containerName);
+            logger.error("도커 컨테이너 삭제 실패(예외): {}", containerName, e);
             return false;
         }
 
@@ -271,10 +302,10 @@ public class DockerService {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                System.err.println("Docker 검색 명령어 실행 실패, exit code: " + exitCode);
+                logger.warn("Docker 검색 명령어 실행 실패, exit code: {}", exitCode);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("contains 예외 발생: {}", name, e);
         }
         return false;
     }
