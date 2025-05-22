@@ -49,6 +49,38 @@ public class DockerService {
         return list;
     }
 
+    public ContainerData getContainer(String name) {
+        try {
+            Process process = new ProcessBuilder("docker", "ps",
+                "-a",
+                "--filter", "\"name="+ name + "\"",                    
+                "--format", "\"{{.ID}} {{.Names}} {{.Status}}\""
+            ).start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(" ", 3);
+                if (parts.length >= 3) {
+                    String id = parts[0];
+                    boolean isRunning = parts[2].toLowerCase().contains("up");
+
+                    if(!name.startsWith("jupyter_")){
+                        continue;
+                    }
+
+                    // 로그 가져오기
+                    String logs = getContainerInfo(id);
+
+                    return new ContainerData(id, name, isRunning, logs);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public boolean stopContainer(String containerId) {
         return runCommand("docker", "stop", containerId);
     }
@@ -106,6 +138,23 @@ public class DockerService {
                 info.append("스토리지 정보 없음 (볼륨 마운트 없음)\n");
             }
 
+            Process gpuProcess = new ProcessBuilder(
+                    "nvidia-smi",
+                    "--query-gpu=name,utilization.gpu,memory.total,memory.used",
+                    "--format=csv,noheader,nounits"
+            ).start();
+
+            BufferedReader gpuReader = new BufferedReader(new InputStreamReader(gpuProcess.getInputStream()));
+            String gpuLine;
+            int gpuIndex = 0;
+            while ((gpuLine = gpuReader.readLine()) != null) {
+                String[] gpuParts = gpuLine.split(",\\s*");
+                if (gpuParts.length == 4) {
+                    info.append(String.format("🎮 GPU%d (%s): 사용률 %s%%, 메모리 %sMB / %sMB\n",
+                            gpuIndex++, gpuParts[0], gpuParts[1], gpuParts[3], gpuParts[2]));
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
             info.append("⚠️ 리소스 정보를 불러오지 못했습니다.\n");
@@ -119,12 +168,10 @@ public class DockerService {
         try {
             String containerName = "jupyter_" + user.getStudentNumber();
 
-            String osName = System.getProperty("os.name").toLowerCase();
-            boolean isLinux = osName.contains("linux");
-
             List<String> command = new ArrayList<>(Arrays.asList(
                 "docker", "run", "-d",
-                "--name", containerName
+                "--name", containerName,
+                "--gpus", "all"
             ));
 
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
