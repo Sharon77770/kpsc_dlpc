@@ -181,39 +181,30 @@ public class DockerService {
                 "--name", containerName
             ));
 
-            // GPU 사용 가능 여부 확인
             if (isNvidiaSmiAvailable()) {
                 command.addAll(Arrays.asList("--gpus", "all"));
             }
 
-            // 포트 설정
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
-                command.addAll(Arrays.asList("-p", "0:8888"));
+                command.addAll(Arrays.asList("-p", "0:8888")); 
             } else {
-                command.addAll(Arrays.asList("-p", user.getPort()));
+                command.addAll(Arrays.asList("-p", user.getPort())); 
             }
 
-            // 루트 권한으로 실행
-            command.addAll(Arrays.asList("--user", "root"));
-
-            // 환경 변수 설정
             command.addAll(Arrays.asList("-e", "JUPYTER_TOKEN=" + apiKey));
 
-            // Jupyter 이미지 및 setup 스크립트
+            // 루트 유저로 실행
             String setupScript = String.join(" && ", Arrays.asList(
-                "id -u kpsc || useradd -m kpsc",  
-                "usermod -aG sudo kpsc",
-                "echo 'kpsc ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
-                "su kpsc -c \"jupyter notebook " +
-                    "--NotebookApp.token=" + apiKey +
-                    " --NotebookApp.default_url=/lab" +
-                    " --NotebookApp.ip=0.0.0.0" +
-                    " --NotebookApp.allow_remote_access=True " +
-                    "--no-browser --port=8888\""
+                "jupyter lab " +
+                "--NotebookApp.token=" + apiKey +
+                " --NotebookApp.default_url=/lab" +
+                " --NotebookApp.ip=0.0.0.0" +
+                " --NotebookApp.allow_remote_access=True" +
+                " --no-browser --port=8888"
             ));
 
             command.addAll(Arrays.asList(
-                "nvcr.io/nvidia/pytorch:24.03-py3",
+                "nvcr.io/nvidia/pytorch:24.03-py3", 
                 "bash", "-c", setupScript
             ));
 
