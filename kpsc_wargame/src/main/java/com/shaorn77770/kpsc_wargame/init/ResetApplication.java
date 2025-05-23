@@ -27,6 +27,14 @@ public class ResetApplication {
             var userList = userService.getAllowedUsers();
 
             for (UserData userData : userList) {
+                if(dockerService.contains("jupyter_" + userData.getStudentNumber())) {
+                    logger.info(
+                        "이미 존재하는 컨테이너: key={} name={}", userData.getApiKey(), 
+                        "jupyter_" + userData.getStudentNumber()
+                    );
+                    continue;    
+                }
+
                 String dockerUrl = dockerService.makeContainer(userData, domain.getDomain());
                 
                 if(dockerUrl == null) {

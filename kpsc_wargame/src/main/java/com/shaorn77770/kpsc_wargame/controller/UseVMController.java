@@ -60,7 +60,8 @@ public class UseVMController {
 
             logger.info("VM 접속 성공: {}", user.getStudentNumber());
             return "redirect:" + user.getJupyterUrl();
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             logger.error("VM 접속 처리 중 예외 발생", e);
             model.addAttribute("errorMessage", "VM 접속 처리 중 오류가 발생했습니다.");
             return "error.html";
