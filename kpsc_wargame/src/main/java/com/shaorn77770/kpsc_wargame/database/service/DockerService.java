@@ -3,10 +3,13 @@ package com.shaorn77770.kpsc_wargame.database.service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class DockerService {
     private static final Logger logger = LogManager.getLogger(DockerService.class);
+    private final UserService userService;
 
     public List<ContainerData> getAllContainers() {
         List<ContainerData> list = new ArrayList<>();
@@ -186,8 +190,10 @@ public class DockerService {
             }
 
             if (user.getJupyterUrl() == null || user.getJupyterUrl().isEmpty()) {
-                command.addAll(Arrays.asList("-p", "0:8888")); 
-            } else {
+                String port = getSafeRandomPort();
+                command.addAll(Arrays.asList("-p", port + ":8888")); 
+            } 
+            else {
                 command.addAll(Arrays.asList("-p", user.getPort())); 
             }
 
@@ -223,18 +229,21 @@ public class DockerService {
 
                     if (portLine != null && portLine.contains(":")) {
                         hostPort = portLine.split(":")[1].trim();
-                    } else {
+                    } 
+                    else {
                         logger.error("makeContainer 에러 발생: host port: {}", portLine);
                         return null;
                     }
                 }
-            } else {
+            } 
+            else {
                 hostPort = user.getPort().split(":")[0].trim();
             }
 
             return "http://" + domain + ":" + hostPort + "/?token=" + apiKey;
 
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             logger.error("makeContainer 예외 발생: user={}, domain={}", user.getStudentNumber(), domain, e);
         }
 
@@ -295,9 +304,55 @@ public class DockerService {
             if (exitCode != 0) {
                 logger.warn("Docker 검색 명령어 실행 실패, exit code: {}", exitCode);
             }
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             logger.error("contains 예외 발생: {}", name, e);
         }
         return false;
+    }
+
+    private Set<Integer> getDockerUsedPorts() {
+        Set<Integer> used = new HashSet<>();
+        try {
+            Process process = new ProcessBuilder(
+                "docker", "ps", "--format", "{{.Ports}}"
+            ).start();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.contains("->") && line.contains(":")) {
+                    String beforeArrow = line.split("->")[0];
+                    String portStr = beforeArrow.substring(beforeArrow.lastIndexOf(":") + 1);
+                    if (portStr.matches("\\d+")) {
+                        used.add(Integer.parseInt(portStr));
+                    }
+                }
+            }
+        } 
+        catch (Exception e) {
+            logger.error("Docker 사용중 포트 조회 실패", e);
+        }
+        return used;
+    }
+
+    private boolean isPortAvailable(int port) {
+        try (ServerSocket ignored = new ServerSocket(port)) {
+            return true;
+        } 
+        catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String getSafeRandomPort() {
+        Set<Integer> dockerUsed = getDockerUsedPorts();
+
+        int port;
+        do {
+            port = 1024 + (int)(Math.random() * (65535 - 1024 + 1));
+        } while (!isPortAvailable(port) || dockerUsed.contains(port));
+
+        return String.valueOf(port);
     }
 }
