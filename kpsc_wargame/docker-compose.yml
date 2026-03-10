@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: kpsc_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:root_pw}
+      MYSQL_DATABASE: ${DB_NAME:kpsc_db}
+      MYSQL_USER: ${DB_USER:kpsc_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:super_secure_pw}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - kpsc_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  app:
+    build:
+      context: ./kpsc_wargame
+      dockerfile: Dockerfile
+    container_name: kpsc_app
+    restart: always
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:kpsc_db}
+      DB_USER: ${DB_USER:kpsc_user}
+      DB_PASSWORD: ${DB_PASSWORD:super_secure_pw}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:admin_pw}
+      JWT_KEY: ${JWT_KEY:super_secret_jwt_key}
+      DOMAIN_NAME: ${DOMAIN_NAME:example.com}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - kpsc_network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  kpsc_network:
+    driver: bridge

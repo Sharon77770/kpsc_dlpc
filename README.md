@@ -2,7 +2,16 @@
 
 **KPSC DLPC**는 KPSC(Kookmin Problem Solved Club) 소속원을 위한 웹 기반 VM 관리 시스템입니다.  
 사용자는 도커 컨테이너 기반의 개인 전용 VM을 신청하고 사용할 수 있으며, 관리자는 이를 승인 및 제어할 수 있습니다.  
-이 프로젝트는 **Spring Boot**, **MySQL**, **Docker**, **JWT 인증** 기반으로 개발되었습니다.
+이 프로젝트는 **Spring Boot**, **MySQL**, **Docker**, **JWT 인증**, **GPU 지원** 기반으로 개발되었습니다.
+
+---
+
+## 📋 선행 요구사항
+
+- **Docker** 및 **Docker Compose** 설치
+- **NVIDIA Docker Runtime** (GPU 사용 시)
+- **NVIDIA CUDA Toolkit** 설치 (GPU 사용 시)
+- 최소 2GB RAM, 5GB 여유 저장공간
 
 ---
 
@@ -55,73 +64,99 @@ kpsc_wargame/
 
 ---
 
-## ⚙️ 환경 설정 (`application.yml`)
+## ⚙️ 환경 설정 (`.env` 파일)
 
-```yaml
-server:
-  port: 8000
-  address: 0.0.0.0
+`.env` 파일에서 다음 환경 변수를 설정합니다:
 
-spring:
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/database_name
-    username: db_id
-    password: db_pw
+```ini
+# 데이터베이스 설정
+DB_NAME=kpsc_db
+DB_USER=kpsc_user
+DB_PASSWORD=super_secure_pw
+DB_ROOT_PASSWORD=root_pw
+DB_HOST=mysql
+DB_PORT=3306
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format-sql: true
+# 관리자 계정
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin_pw
 
-  application:
-    name: KPSC-DLPC
+# JWT 설정
+JWT_KEY=super_secret_jwt_key
 
-  devtools:
-    restart:
-      enabled: true
-
-admin:
-  username: admin_id
-  password: admin_pw
-
-jwt:
-  jwtkey: your_jwt_key
-
-domain:
-  domain: your_domain
+# 도메인
+DOMAIN_NAME=example.com
 ```
 
 🔒 **보안 권장 사항**  
-- 민감한 정보(`db_pw`, `jwtkey`, `admin_pw`)는 환경 변수로 추출하거나 `.env`, `application-prod.yml`로 분리하여 관리하세요.
+- `.env` 파일에는 실제 보안 정보를 입력하고 `.gitignore`에 추가하여 버전 관리에서 제외하세요.
+- 프로덕션 환경에서는 보다 강력한 비밀번호를 사용하세요.
+- `JWT_KEY`는 최소 32자 이상의 안전한 키로 설정하세요.
 
 ---
 
-## ▶️ 실행 방법
+## ▶️ 실행 방법 (Docker Compose)
 
-1. **의존성 설치 및 빌드**
+### 빠른 시작
+
+1. **`.env` 파일 설정**
    ```bash
-   ./gradlew build
+   # 프로젝트 루트 디렉토리에 .env 파일이 있는지 확인
+   cat .env
+   ```
+   필요시 `.env` 파일을 수정하여 환경 변수를 조정합니다.
+
+2. **Docker 컴포즈로 빌드 및 실행**
+   ```bash
+   docker-compose up --build
    ```
 
-2. **MySQL DB 준비**
-   - `database_name` 생성
-   - 사용자 계정 및 권한 부여
-   - `application.yml`에 DB 정보 입력
-
-3. **서버 실행**
-   ```bash
-   ./gradlew bootRun
-   ```
-   또는 IDE에서 `KpscWargameApplication` 실행
-
-4. **웹 접속**
+3. **웹 접속**
    ```
    http://localhost:8000
    ```
+
+4. **컨테이너 중지**
+   ```bash
+   docker-compose down
+   ```
+
+### GPU 지원 (선택사항)
+
+GPU를 사용하려면 다음 설정이 필요합니다:
+
+- **Linux 사용자:**
+  ```bash
+  # NVIDIA Container Runtime 설치 확인
+  docker run --rm --gpus all nvidia/cuda:12.0-runtime-ubuntu22.04 nvidia-smi
+  ```
+
+- **Windows 사용자:**
+  - WSL2에서 NVIDIA CUDA Toolkit 설치
+  - Docker Desktop의 GPU 지원 활성화
+
+`docker-compose.yml`의 app 서비스에 이미 GPU 할당이 설정되어 있습니다:
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+```
+
+### 로컬 개발 환경 (선택)
+
+Docker 없이 로컬에서 실행하려면:
+
+```bash
+# MySQL 별도 실행 필요
+mysql -u root -p < init.sql
+
+# Spring Boot 애플리케이션 실행
+./gradlew bootRun
+```
 
 ---
 

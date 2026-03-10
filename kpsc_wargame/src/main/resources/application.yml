@@ -9,9 +9,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/database_name
-    username: db_id
-    password: db_pw
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:kpsc_db}
+    username: ${DB_USER:kpsc_user}
+    password: ${DB_PASSWORD:super_secure_pw}
 
   jpa:
     hibernate:
@@ -31,11 +31,11 @@ spring:
       enabled: true
 
 admin:
-  username: admin_id
-  password: admin_pw
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:admin_pw}
 
 jwt:
-  jwtkey: your_jwt_key
+  jwtkey: ${JWT_KEY:super_secret_jwt_key}
 
 domain:
-  domain: your_domain
+  domain: ${DOMAIN_NAME:example.com}
