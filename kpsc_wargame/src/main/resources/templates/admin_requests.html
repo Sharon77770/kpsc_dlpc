@@ -2,91 +2,143 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>계정 승인 요청 - KPSC DLPC</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+  </style>
   <script>
-    // 3초 후 메시지 숨김
+    // 3초 후 메시지 부드럽게 숨김 처리 (Tailwind 클래스 활용)
     window.addEventListener("DOMContentLoaded", () => {
-      const alertBox = document.getElementById("alert-box");
-      if (alertBox) {
+      const alertBoxes = document.querySelectorAll(".alert-box");
+      alertBoxes.forEach(box => {
         setTimeout(() => {
-          alertBox.classList.add("fade");
-          setTimeout(() => alertBox.remove(), 500); // fade 애니메이션 이후 제거
+          box.classList.remove("opacity-100");
+          box.classList.add("opacity-0"); // 페이드 아웃 애니메이션
+          setTimeout(() => box.remove(), 500); // 완전히 DOM에서 제거
         }, 3000);
-      }
+      });
     });
   </script>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
 
-  <!-- 헤더 -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="/">KPSC DLPC</a>
-      <div class="collapse navbar-collapse">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link" href="/">메인 페이지</a></li>
-          <li class="nav-item"><a class="nav-link" href="/register">등록하기</a></li>
-          <li class="nav-item"><a class="nav-link" href="/vm">VM 접속하기</a></li>
-          <li class="nav-item"><a class="nav-link active" href="/admin">관리자</a></li>
-        </ul>
+  <nav class="bg-slate-900 border-b border-slate-800 shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center">
+          <a href="/" class="flex-shrink-0 flex items-center gap-2">
+            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+            <span class="font-bold text-xl tracking-tight text-white">KPSC DLPC <span class="text-xs text-indigo-400 ml-1 font-semibold tracking-wider">ADMIN</span></span>
+          </a>
+        </div>
+        
+        <div class="hidden sm:flex sm:space-x-8 items-center">
+          <a href="/" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">메인 페이지</a>
+          <a href="/register" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">등록하기</a>
+          <a href="/vm" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">VM 접속하기</a>
+          <a href="/admin" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm transition-colors">관리자</a>
+        </div>
+
+        <div class="-mr-2 flex items-center sm:hidden">
+          <button type="button" id="mobile-menu-btn" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none">
+            <span class="sr-only">메뉴 열기</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+        </div>
       </div>
     </div>
   </nav>
 
-  <!-- 본문 -->
-  <main class="container my-5">
-
-    <!-- 메시지 영역 -->
-    <div th:if="${successMessage}" id="alert-box" class="alert alert-success text-center" role="alert" th:text="${successMessage}"></div>
-    <div th:if="${errorMessage}" id="alert-box" class="alert alert-danger text-center" role="alert" th:text="${errorMessage}"></div>
-
-    <h2 class="text-center mb-4">승인 대기 유저 목록</h2>
-
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover align-middle text-center">
-        <thead class="table-dark">
-          <tr>
-            <th>이름</th>
-            <th>학번</th>
-            <th>학과</th>
-            <th>전화번호</th>
-            <th>승인</th>
-            <th>거절</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr th:each="user : ${pendingUsers}">
-            <td th:text="${user.userName}">이름</td>
-            <td th:text="${user.studentNumber}">학번</td>
-            <td th:text="${user.major}">학과</td>
-            <td th:text="${user.phone}">전화번호</td>
-            <form th:action="@{'/admin/requests/approve?key=' + ${user.apiKey}}" method="post">
-              <td><button type="submit" class="btn btn-success btn-sm">승인</button>
-            </form>
-            </td>
-            <td>
-              <form th:action="@{'/admin/requests/reject?key=' + ${user.apiKey}}" method="post">
-                <button type="submit" class="btn btn-danger btn-sm">거절</button>
-              </form>
-            </td>
-          </tr>
-          <tr th:if="${#lists.isEmpty(pendingUsers)}">
-            <td colspan="6" class="text-muted">승인 대기 중인 유저가 없습니다.</td>
-          </tr>
-        </tbody>
-      </table>
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <div th:if="${successMessage}" class="alert-box transition-opacity duration-500 opacity-100 flex items-center p-4 mb-6 text-sm text-emerald-800 border border-emerald-300 rounded-lg bg-emerald-50 shadow-sm" role="alert">
+      <svg class="flex-shrink-0 inline w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span class="font-bold mr-2">성공!</span> <span th:text="${successMessage}"></span>
+    </div>
+    
+    <div th:if="${errorMessage}" class="alert-box transition-opacity duration-500 opacity-100 flex items-center p-4 mb-6 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 shadow-sm" role="alert">
+      <svg class="flex-shrink-0 inline w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span class="font-bold mr-2">오류:</span> <span th:text="${errorMessage}"></span>
     </div>
 
-    <div class="text-center mt-4">
-      <a href="/admin" class="btn btn-outline-secondary">← 관리자 메인으로 돌아가기</a>
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+          승인 대기 유저 목록
+        </h2>
+        <p class="mt-2 text-sm text-slate-500">새롭게 가입을 요청한 유저의 정보를 확인하고 계정을 승인하거나 거절할 수 있습니다.</p>
+      </div>
+      <a href="/admin" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+        ← 대시보드로 돌아가기
+      </a>
     </div>
+
+    <div class="bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">이름</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">학번</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">학과</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">전화번호</th>
+              <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">관리 작업</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-slate-200">
+            <tr th:each="user : ${pendingUsers}" class="hover:bg-slate-50 transition-colors">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900" th:text="${user.userName}">홍길동</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600 font-mono" th:text="${user.studentNumber}">20240000</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600" th:text="${user.major}">컴퓨터공학과</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono" th:text="${user.phone}">010-0000-0000</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <form th:action="@{'/admin/requests/approve?key=' + ${user.apiKey}}" method="post" class="m-0">
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-bold rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors">
+                      승인
+                    </button>
+                  </form>
+                  <form th:action="@{'/admin/requests/reject?key=' + ${user.apiKey}}" method="post" class="m-0">
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-bold rounded-md shadow-sm text-white bg-rose-500 hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 transition-colors">
+                      거절
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            
+            <tr th:if="${#lists.isEmpty(pendingUsers)}">
+              <td colspan="5" class="px-6 py-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <p class="text-slate-500 text-sm font-medium">현재 승인 대기 중인 유저가 없습니다.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 
-  <!-- 푸터 -->
-  <footer class="bg-dark text-white text-center py-3 mt-auto">
-    © 2025 GitHub Sharon77770
+  <footer class="bg-slate-900 mt-auto border-t border-slate-800">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <p class="text-center text-sm text-slate-500">
+        &copy; 2026 KPSC DLPC Admin by <a href="https://github.com/Sharon77770" target="_blank" class="text-slate-400 hover:text-white transition-colors">GitHub Sharon77770</a>. All rights reserved.
+      </p>
+    </div>
   </footer>
+
+  <script>
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn.addEventListener('click', () => {
+      menu.classList.toggle('hidden');
+    });
+  </script>
 
 </body>
 </html>

@@ -1,17 +1,14 @@
 server:
   port: 8000
   address: 0.0.0.0
-#  servlet:
-#    encoding:
-#      force-response: true
-#      charset: UTF-8
+
 spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/database_name
-    username: db_id
-    password: db_pw
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -26,16 +23,12 @@ spring:
   application:
     name: KPSC-DLPC
 
-  devtools:
-    restart:
-      enabled: true
-
 admin:
-  username: admin_id
-  password: admin_pw
+  username: ${ADMIN_USERNAME}
+  password: ${ADMIN_PASSWORD}
 
 jwt:
-  jwtkey: your_jwt_key
+  jwtkey: ${JWT_KEY}
 
 domain:
-  domain: your_domain
+  domain: ${DOMAIN_NAME}

@@ -2,79 +2,147 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VM 관리 - KPSC DLPC</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .log-viewer {
-      max-height: 300px;
-      overflow-y: auto;
-      background-color: #f8f9fa;
-      padding: 1rem;
-      border: 1px solid #dee2e6;
-      border-radius: 0.375rem;
-      font-family: monospace;
-      white-space: pre-wrap;
-    }
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+    
+    /* 기본 details 화살표 숨기기 */
+    summary { list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    
+    /* 터미널 스크롤바 커스텀 */
+    .terminal-scroll::-webkit-scrollbar { width: 8px; }
+    .terminal-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+    .terminal-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .terminal-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
   </style>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
 
-  <!-- 헤더 -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="/">KPSC DLPC</a>
-      <div class="collapse navbar-collapse">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link" href="/">메인 페이지</a></li>
-          <li class="nav-item"><a class="nav-link" href="/register">등록하기</a></li>
-          <li class="nav-item"><a class="nav-link" href="/vm">VM 접속하기</a></li>
-          <li class="nav-item"><a class="nav-link active" href="/admin">관리자</a></li>
-        </ul>
+  <nav class="bg-slate-900 border-b border-slate-800 shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex items-center">
+          <a href="/" class="flex-shrink-0 flex items-center gap-2">
+            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+            <span class="font-bold text-xl tracking-tight text-white">KPSC DLPC <span class="text-xs text-indigo-400 ml-1 font-semibold tracking-wider">ADMIN</span></span>
+          </a>
+        </div>
+        
+        <div class="hidden sm:flex sm:space-x-8 items-center">
+          <a href="/" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">메인 페이지</a>
+          <a href="/register" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">등록하기</a>
+          <a href="/vm" class="text-slate-300 hover:text-white px-1 pt-1 text-sm font-medium transition-colors">VM 접속하기</a>
+          <a href="/admin" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm transition-colors">관리자</a>
+        </div>
+
+        <div class="-mr-2 flex items-center sm:hidden">
+          <button type="button" id="mobile-menu-btn" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none">
+            <span class="sr-only">메뉴 열기</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sm:hidden hidden bg-slate-800" id="mobile-menu">
+      <div class="pt-2 pb-3 space-y-1 shadow-lg">
+        <a href="/" class="text-slate-300 hover:bg-slate-700 hover:text-white block pl-3 pr-4 py-2 text-base font-medium">메인 페이지</a>
+        <a href="/register" class="text-slate-300 hover:bg-slate-700 hover:text-white block pl-3 pr-4 py-2 text-base font-medium">등록하기</a>
+        <a href="/vm" class="text-slate-300 hover:bg-slate-700 hover:text-white block pl-3 pr-4 py-2 text-base font-medium">VM 접속하기</a>
+        <a href="/admin" class="bg-indigo-600 text-white block pl-3 pr-4 py-2 text-base font-bold border-l-4 border-indigo-400">관리자 대시보드</a>
       </div>
     </div>
   </nav>
 
-  <main class="container my-5">
-    <h2 class="mb-4">도커 컨테이너 관리</h2>
-
-    <div th:if="${containers.empty}">
-      <p class="text-muted">현재 생성된 도커 컨테이너가 없습니다.</p>
+  <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+          <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+          도커 컨테이너 관리
+        </h2>
+        <p class="mt-2 text-sm text-slate-500">현재 시스템에 배포된 가상 머신(VM) 및 컨테이너 목록과 상태를 관리합니다.</p>
+      </div>
+      <a href="/admin" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+        대시보드로 돌아가기
+      </a>
     </div>
 
-    <div class="accordion" id="vmAccordion" th:if="${!containers.empty}">
-      <div class="accordion-item" th:each="container : ${containers}">
-        <h2 class="accordion-header" th:id="'heading-' + ${container.id}">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                  th:data-bs-target="'#collapse-' + ${container.id}"
-                  aria-expanded="false"
-                  th:aria-controls="'collapse-' + ${container.id}">
-            <span th:text="${container.name}">컨테이너 이름</span>
-            <span class="ms-2 badge"
-                  th:classappend="${container.running} ? 'bg-success' : 'bg-secondary'"
-                  th:text="${container.running} ? '실행 중' : '중지됨'"></span>
-          </button>
-        </h2>
-        <div class="accordion-collapse collapse" th:id="'collapse-' + ${container.id}"
-             th:aria-labelledby="'heading-' + ${container.id}" data-bs-parent="#vmAccordion">
-          <div class="accordion-body">
-            <pre class="log-viewer" th:text="${container.logs}">로그 출력</pre>
+    <div th:if="${containers.empty}" class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+      <svg class="mx-auto h-12 w-12 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+      <h3 class="text-lg font-bold text-slate-900">조회된 컨테이너가 없습니다</h3>
+      <p class="text-slate-500 mt-2 text-sm">현재 생성되거나 가동 중인 도커 컨테이너 내역이 존재하지 않습니다.</p>
+    </div>
 
-            <form th:action="${container.running} ? @{/admin/vmlogs/stop(key=${container.id})} : @{/admin/vmlogs/start(key=${container.id})}" method="post" class="mt-3">
-              <input type="hidden" name="containerId" th:value="${container.id}">
-              <button type="submit" th:class="'btn ' + (container.running ? 'btn-danger' : 'btn-primary')"
-                      th:text="${container.running} ? '중지하기' : '실행하기'"></button>
-            </form>
+    <div class="space-y-4" th:if="${!containers.empty}">
+      
+      <details th:each="container : ${containers}" class="group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        <summary class="flex items-center justify-between p-5 cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors select-none">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+            <span class="font-bold text-slate-800 text-lg" th:text="${container.name}">컨테이너 이름</span>
           </div>
+          
+          <div class="flex items-center gap-4">
+            <span class="px-3 py-1 rounded-full text-xs font-bold border"
+                  th:classappend="${container.running} ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'"
+                  th:text="${container.running} ? '실행 중' : '중지됨'">
+            </span>
+            <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </summary>
+        
+        <div class="p-6 border-t border-slate-200">
+          
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                실시간 로그 출력
+              </h4>
+            </div>
+            <div class="bg-slate-900 rounded-lg border border-slate-800 p-1 shadow-inner">
+              <pre class="terminal-scroll p-4 text-emerald-400 font-mono text-sm max-h-80 overflow-y-auto whitespace-pre-wrap break-all" th:text="${container.logs}">로그 출력 영역</pre>
+            </div>
+          </div>
+
+          <form th:action="${container.running} ? @{/admin/vmlogs/stop(key=${container.id})} : @{/admin/vmlogs/start(key=${container.id})}" method="post" class="flex justify-end border-t border-slate-100 pt-4">
+            <input type="hidden" name="containerId" th:value="${container.id}">
+            <button type="submit" 
+                    class="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    th:classappend="${container.running} ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'">
+              <span th:text="${container.running} ? '컨테이너 중지하기' : '컨테이너 실행하기'"></span>
+            </button>
+          </form>
+
         </div>
-      </div>
+      </details>
+      
     </div>
   </main>
 
-  <!-- 푸터 -->
-  <footer class="bg-dark text-white text-center py-3 mt-auto">
-    © 2025 GitHub Sharon77770
+  <footer class="bg-slate-900 mt-auto border-t border-slate-800">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <p class="text-center text-sm text-slate-500">
+        &copy; 2026 KPSC DLPC Admin by <a href="https://github.com/Sharon77770" target="_blank" class="text-slate-400 hover:text-white transition-colors">GitHub Sharon77770</a>. All rights reserved.
+      </p>
+    </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 모바일 메뉴 토글
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn.addEventListener('click', () => {
+      menu.classList.toggle('hidden');
+    });
+  </script>
+
 </body>
 </html>
