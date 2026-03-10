@@ -9,8 +9,6 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y docker.io
-
 COPY --from=builder /build/build/libs/*.jar app.jar
 COPY src/main/resources/application.yml application.yml
 
